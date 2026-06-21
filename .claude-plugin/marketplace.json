@@ -1,0 +1,12 @@
+{
+  "name": "macdo",
+  "description": "Official mac.do marketplace — the publish-to-macdo skill for shipping AI-built tools to mac.do straight from your editor.",
+  "owner": { "name": "mac.do", "url": "https://mac.do" },
+  "plugins": [
+    {
+      "name": "publish-to-macdo",
+      "source": "./",
+      "description": "Publish a local AI-built project to mac.do from your editor."
+    }
+  ]
+}

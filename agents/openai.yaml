@@ -1,0 +1,8 @@
+interface:
+  display_name: "Publish to mac.do"
+  short_description: "Submit local AI-built projects to mac.do"
+  brand_color: "#216869"
+  default_prompt: "Use $publish-to-macdo to submit my local project to mac.do."
+
+policy:
+  allow_implicit_invocation: true
