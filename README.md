@@ -25,7 +25,7 @@ This repo also ships the raw skill (`skills/publish-to-macdo/`) and a Codex agen
 - Inspects project type, framework, package manager, and build command.
 - Generates a mac.do manifest and submits it through the publishing API.
 - Uses browser/device authorization to your mac.do account — no API key to manage.
-- Defaults to `https://app.mac.do`; set `MACDO_API_BASE` to target a local instance.
+- Defaults to `https://app-api.mac.do`; set `MACDO_API_BASE` to target a local instance.
 
 ## Links
 

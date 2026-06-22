@@ -87,7 +87,7 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate and submit a mac.do manifest payload")
     parser.add_argument("--project", default=".", help="Local project directory")
-    parser.add_argument("--api-base", default=os.environ.get("MACDO_API_BASE", "https://app.mac.do"))
+    parser.add_argument("--api-base", default=os.environ.get("MACDO_API_BASE", "https://app-api.mac.do"))
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--token-file", default=os.environ.get("MACDO_TOKEN_FILE"))
     parser.add_argument("--no-device-auth", action="store_true",

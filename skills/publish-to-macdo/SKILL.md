@@ -36,7 +36,7 @@ plausible publishable projects exist.
 - A mac.do publishing credential. Prefer browser/device authorization to the
   creator's mac.do account. `MACDO_API_KEY` remains an internal/admin fallback
   for local development and smoke tests.
-- A mac.do API base URL in `MACDO_API_BASE`; defaults to `https://app.mac.do`.
+- A mac.do API base URL in `MACDO_API_BASE`; defaults to `https://app-api.mac.do`.
   Set it to a local URL such as `http://localhost:8080` only when developing
   against your own instance.
 
@@ -102,7 +102,7 @@ shape:
 ```sh
 python3 <skill_dir>/scripts/macdo_publish.py \
   --project <project_dir> \
-  --api-base "${MACDO_API_BASE:-https://app.mac.do}" \
+  --api-base "${MACDO_API_BASE:-https://app-api.mac.do}" \
   --primary-url "https://example.com"
 ```
 
@@ -110,7 +110,7 @@ Check a previous submission internally:
 
 ```sh
 python3 <skill_dir>/scripts/macdo_publish.py \
-  --api-base "${MACDO_API_BASE:-https://app.mac.do}" \
+  --api-base "${MACDO_API_BASE:-https://app-api.mac.do}" \
   --status-id "<submission_id>"
 ```
 
