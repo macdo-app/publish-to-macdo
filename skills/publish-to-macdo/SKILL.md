@@ -1,6 +1,6 @@
 ---
 name: publish-to-macdo
-description: Publish a local AI-built project to mac.do by inspecting the project type, collecting or inferring metadata, choosing the right public entrypoint URL, obtaining or using a mac.do publishing credential, and submitting it to the mac.do API. Use when the user asks to publish, submit, list, ship, or register a local AI-built tool, app, CLI, API, library, plugin, workflow, bot, agent, extension, mobile app, desktop app, dataset, or document on mac.do.
+description: Publish a local AI-built project to mac.do by inspecting the project type, collecting or inferring metadata, choosing the right public entrypoint URL, obtaining or using a mac.do publishing credential, and submitting it to the mac.do API. Use when the user asks to publish, showcase, share, submit, list, ship, or register a local AI-built tool, app, CLI, API, library, plugin, workflow, bot, agent, extension, mobile app, desktop app, dataset, or document on mac.do. Chinese trigger phrasings include 发布到 mac.do, 展示到 mac.do, and 分享到 mac.do.
 ---
 
 # Publish To mac.do
