@@ -47,8 +47,10 @@ Do not print credentials. Do not commit credentials into project files.
 1. Inspect the local project.
 2. Generate the manifest submission payload from project metadata, package
    metadata, supplied URLs, and the minimum missing user answers.
-3. If `macdo.json` exists, treat it as optional input and preserve safe
-   user-provided fields. Never require the creator to prepare it by hand.
+3. The script keeps per-project state (the tool id for precise updates and the
+   prior manifest) in `~/.macdo/projects.json`, keyed by the project path — it no
+   longer writes anything into the project directory. Re-publishing the same
+   project updates the existing tool. Never require the creator to prepare metadata by hand.
 4. If required fields are missing, ask only for the missing values.
 5. Obtain a scoped mac.do publishing credential through browser/device
    authorization when no cached token, `MACDO_PUBLISHING_TOKEN`, or
@@ -79,8 +81,9 @@ Collect automatically from the project directory when possible:
   Gradle.
 - Build command when the project exposes one.
 - Output directory when it is meaningful for that project type.
-- Existing `macdo.json` only as optional prior generated metadata; never require
-  the user to prepare it.
+- The prior generated manifest from `~/.macdo/projects.json` (carried forward
+  across re-publishes) only as optional input; never require the user to prepare it.
+  A legacy project-local `macdo.json` is read once for migration, then left untouched.
 
 Ask the user only for missing information that cannot be inferred:
 
@@ -134,14 +137,17 @@ Optional flags:
 - `--primary-url`
 - `--dry-run`
 
-The script currently writes a generated `macdo.json` and submits it unless
-`--dry-run` is used. Treat that file as a generated artifact, not a prerequisite
-the creator must prepare. It generates a stable `Idempotency-Key` from the
-manifest by default, so retrying an identical submission returns the same
+The script does not write into the project directory. It keeps per-project state
+(the tool id and the prior manifest) in `~/.macdo/projects.json`, keyed by the
+absolute project path; `--dry-run` builds and stores the manifest without
+submitting. On a re-publish it sends the stored tool id as `X-Macdo-Tool-Id` so
+the backend updates that exact tool — surviving URL or name changes — and records
+the tool id the submission returns. It also generates a stable `Idempotency-Key`
+from the manifest by default, so retrying an identical submission returns the same
 submission instead of creating duplicates. Pass `--idempotency-key` only when
-deliberately reusing a known retry key or forcing a separate submission for the
-same manifest. If the API rejects the submission, report the returned request ID
-so server logs can be searched quickly.
+deliberately reusing a known retry key or forcing a separate submission. If the API
+rejects the submission, report the returned request ID so server logs can be
+searched quickly.
 
 Credential lookup order:
 

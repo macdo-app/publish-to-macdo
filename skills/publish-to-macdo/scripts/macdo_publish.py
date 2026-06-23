@@ -66,21 +66,28 @@ def main():
     if not project.exists() or not project.is_dir():
         fail(f"Project directory does not exist: {project}")
 
-    manifest_path = project / "macdo.json"
-    manifest = read_manifest(manifest_path)
+    # Project state (the tool_id for precise updates + the carried-forward manifest) lives in
+    # ~/.macdo/projects.json keyed by the absolute project path — never in the project directory.
+    # Keying by path keeps this deterministic and agent-agnostic: the script finds the tool_id
+    # itself, with no reliance on the calling agent remembering anything.
+    state = project_state(project)
+    prior_manifest = state.get("manifest")
+    if prior_manifest is None:
+        prior_manifest = read_legacy_manifest(project)  # one-time migration from old project/macdo.json
     detected = detect_project(project)
-    manifest = merge_manifest(manifest, args, detected)
+    manifest = merge_manifest(prior_manifest or {}, args, detected)
     validate_manifest(manifest)
-    write_manifest(manifest_path, manifest)
 
-    print(f"Wrote {manifest_path}")
     if args.dry_run:
+        save_project_state(project, manifest, state.get("tool_id"))
         print(json.dumps(manifest, indent=2, ensure_ascii=False))
         return
 
     credential = require_publishing_credential(args, api_base)
 
-    response = submit_manifest(api_base, credential, manifest, args.idempotency_key)
+    tool_id = state.get("tool_id")
+    response = submit_manifest(api_base, credential, manifest, args.idempotency_key, tool_id)
+    save_project_state(project, manifest, response.get("tool_id") or tool_id)
     print(json.dumps(response, indent=2, ensure_ascii=False))
 
 
@@ -238,13 +245,68 @@ def post_json_allow_error(url, payload):
         fail(f"mac.do authorization failed: {exc.reason}")
 
 
-def read_manifest(path):
+def projects_file():
+    override = os.environ.get("MACDO_PROJECTS_FILE")
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / ".macdo" / "projects.json"
+
+
+def read_projects():
+    path = projects_file()
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        fail(f"Invalid existing macdo.json: {exc}")
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}  # corrupt store is non-fatal — start fresh (server-side URL dedup still applies)
+    return data if isinstance(data, dict) else {}
+
+
+def project_state(project):
+    entry = read_projects().get(str(project))
+    return entry if isinstance(entry, dict) else {}
+
+
+def save_project_state(project, manifest, tool_id):
+    path = projects_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    projects = read_projects()
+    entry = projects.get(str(project))
+    if not isinstance(entry, dict):
+        entry = {}
+    entry["manifest"] = manifest
+    if tool_id:
+        entry["tool_id"] = str(tool_id)
+    projects[str(project)] = entry
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(projects, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(path)  # atomic replace so a crash can't truncate the store
+
+
+def read_legacy_manifest(project):
+    """Carry a manifest forward from a pre-projects.json project/macdo.json, once. Non-destructive:
+    the old file is read but never written or deleted — the script just stops maintaining it."""
+    legacy = project / "macdo.json"
+    if not legacy.exists():
+        return None
+    try:
+        return json.loads(legacy.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def build_submission_headers(credential, retry_key, tool_id=None):
+    headers = {
+        "Authorization": f"Bearer {credential}",
+        "Idempotency-Key": retry_key,
+        "Content-Type": "application/json",
+        "User-Agent": "publish-to-macdo-skill/0.1",
+    }
+    if tool_id:
+        # Precise update: the backend updates this exact tool, surviving URL/name changes.
+        headers["X-Macdo-Tool-Id"] = str(tool_id)
+    return headers
 
 
 def detect_project(project):
@@ -774,22 +836,13 @@ def validate_public_http_url(value, field):
         pass
 
 
-def write_manifest(path, manifest):
-    path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-
-def submit_manifest(api_base, credential, manifest, idempotency_key):
+def submit_manifest(api_base, credential, manifest, idempotency_key, tool_id=None):
     body = json.dumps(manifest).encode("utf-8")
     retry_key = idempotency_key or default_idempotency_key(manifest)
     req = request.Request(
         f"{api_base}/api/submissions",
         data=body,
-        headers={
-            "Authorization": f"Bearer {credential}",
-            "Idempotency-Key": retry_key,
-            "Content-Type": "application/json",
-            "User-Agent": "publish-to-macdo-skill/0.1",
-        },
+        headers=build_submission_headers(credential, retry_key, tool_id),
         method="POST",
     )
     try:
