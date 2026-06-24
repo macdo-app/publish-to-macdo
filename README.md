@@ -16,9 +16,14 @@ Then, in your project, tell Claude Code: **publish to mac.do**.
 
 ## Codex / Cursor
 
-This repo also ships the raw skill (`skills/publish-to-macdo/`) and a Codex agent config
-(`agents/openai.yaml`). Point your agent at the skill directory; it runs
-`skills/publish-to-macdo/scripts/macdo_publish.py` internally.
+These agents have no plugin marketplace, so install the skill into their skills directory:
+
+```
+scripts/install-codex.sh         # copies the skill into ~/.codex/skills/publish-to-macdo
+scripts/install-codex.sh <dir>   # or into a custom skills dir
+```
+
+Then open your agent in the project and say **publish to mac.do**.
 
 ## What it does
 
