@@ -14,6 +14,30 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import macdo_publish as mp  # noqa: E402
 
 
+def _args(**kw):
+    """A parse_args-shaped Namespace with every attribute merge_manifest reads, defaulted to None."""
+    import argparse
+    defaults = dict(type=None, name=None, summary=None, description=None,
+                    primary_url=None, demo_url=None, source_url=None,
+                    framework=None, package_manager=None, build_command=None,
+                    output_dir=None, creator_name=None, creator_url=None,
+                    category=None, original_language=None, created_with=None)
+    defaults.update(kw)
+    return argparse.Namespace(**defaults)
+
+
+class SchemaV2Test(unittest.TestCase):
+    def test_schema_constant_is_v2(self):
+        self.assertEqual(mp.SCHEMA, "https://mac.do/schemas/tool-manifest-v2.json")
+
+    def test_force_upgrades_carried_forward_v1_schema(self):
+        carried = {"schema": "https://mac.do/schemas/tool-manifest-v1.json", "name": "X"}
+        manifest = mp.merge_manifest(carried, _args(name="X", summary="s", description="d",
+                                                    primary_url="https://example.com"),
+                                     {"type": "web"})
+        self.assertEqual(manifest["schema"], mp.SCHEMA)
+
+
 class BuildSubmissionHeadersTest(unittest.TestCase):
     def test_includes_tool_id_header_when_present(self):
         headers = mp.build_submission_headers("cred", "key-1", "11111111-1111-1111-1111-111111111111")

@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
 
 
-SCHEMA = "https://mac.do/schemas/tool-manifest-v1.json"
+SCHEMA = "https://mac.do/schemas/tool-manifest-v2.json"
 TOP_LEVEL_FIELDS = {
     "schema",
     "name",
@@ -715,7 +715,7 @@ def detect_output_dir(framework):
 
 def merge_manifest(existing, args, detected):
     manifest = dict(existing)
-    manifest.setdefault("schema", SCHEMA)
+    manifest["schema"] = SCHEMA  # v2-only: upgrade any carried-forward v1 manifest
     manifest["type"] = first_present(args.type, manifest.get("type"), detected.get("type"), "other")
     manifest["name"] = first_present(args.name, manifest.get("name"), detected.get("name"))
     manifest["summary"] = first_present(args.summary, manifest.get("summary"), detected.get("summary"))
