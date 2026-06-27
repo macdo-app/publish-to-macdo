@@ -191,5 +191,34 @@ class TranslationsTest(unittest.TestCase):
             mp.validate_manifest(manifest)
 
 
+class OriginalLanguageAndCreatedWithTest(unittest.TestCase):
+    def test_original_language_carried_into_manifest(self):
+        manifest = mp.merge_manifest({}, _args(name="X", summary="s", description="d",
+                                               primary_url="https://example.com",
+                                               original_language="日本語"), {"type": "web"})
+        self.assertEqual(manifest["original_language"], "日本語")
+
+    def test_original_language_absent_when_not_given(self):
+        manifest = mp.merge_manifest({}, _args(name="X", summary="s", description="d",
+                                               primary_url="https://example.com"), {"type": "web"})
+        self.assertNotIn("original_language", manifest)
+
+    def test_original_language_over_40_fails(self):
+        manifest = _valid_manifest(original_language="x" * 41)
+        with self.assertRaises(SystemExit):
+            mp.validate_manifest(manifest)
+
+    def test_created_with_no_longer_defaults_to_codex(self):
+        manifest = mp.merge_manifest({}, _args(name="X", summary="s", description="d",
+                                               primary_url="https://example.com"), {"type": "web"})
+        self.assertNotIn("created_with", manifest)
+
+    def test_created_with_flag_is_used(self):
+        manifest = mp.merge_manifest({}, _args(name="X", summary="s", description="d",
+                                               primary_url="https://example.com",
+                                               created_with=["Claude"]), {"type": "web"})
+        self.assertEqual(manifest["created_with"], ["Claude"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -176,6 +176,10 @@ def parse_args(args=None):
                         help="A controlled category key (repeatable); pick from the SKILL.md vocabulary")
     parser.add_argument("--translations-file", default=None,
                         help="JSON file mapping locale -> {summary, description} for en/zh_CN/zh_TW")
+    parser.add_argument("--original-language", default=None,
+                        help="Source language of the project content: en/zh_CN/zh_TW, else its endonym (e.g. 日本語)")
+    parser.add_argument("--created-with", action="append", default=None,
+                        help="Tool/agent the project was built with (repeatable)")
     return parser.parse_args(args)
 
 
@@ -787,8 +791,18 @@ def merge_manifest(existing, args, detected):
     manifest["categories"] = args.category or manifest.get("categories") or ["other"]
     manifest.setdefault("tags", ["vibe-coding"])
     manifest.setdefault("permissions", [])
-    manifest.setdefault("created_with", ["Codex"])
+    created_with = args.created_with or manifest.get("created_with")
+    if created_with:
+        manifest["created_with"] = created_with
+    else:
+        manifest.pop("created_with", None)
     manifest.setdefault("license", "unknown")
+
+    original_language = first_present(args.original_language, manifest.get("original_language"))
+    if original_language:
+        manifest["original_language"] = original_language
+    else:
+        manifest.pop("original_language", None)
 
     creator = dict(manifest.get("creator") or {})
     creator["name"] = first_present(args.creator_name, creator.get("name"), "Unknown creator")
@@ -861,6 +875,9 @@ def validate_manifest(manifest):
                 fail(f"translations[{locale}].summary must be 1–280 chars")
             if not variant.get("description") or len(variant["description"]) > 4000:
                 fail(f"translations[{locale}].description must be 1–4000 chars")
+    original_language = manifest.get("original_language")
+    if original_language is not None and (not original_language or len(original_language) > 40):
+        fail("original_language must be 1–40 characters")
     validate_list_limit(manifest.get("tags"), "tags", 12)
     validate_list_limit(manifest.get("permissions"), "permissions", 12)
     validate_list_limit(manifest.get("created_with"), "created_with", 8)

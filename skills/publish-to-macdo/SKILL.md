@@ -103,6 +103,18 @@ Pass each with `--category <key>`. Unknown keys are rejected. Use `other` only w
 - Business: `marketing`, `ecommerce`, `finance`, `crm`, `customer-support`, `hr`
 - Lifestyle & Consumer: `social`, `communication`, `health`, `lifestyle`, `travel`, `food`, `games`, `news`
 - Tech & Other: `web3`, `security`, `utilities`, `other`
+### Source language (`--original-language`)
+
+Identify the language of the project's own content (README, UI strings, documentation) and pass
+`--original-language` with the appropriate tag:
+
+- Use `en`, `zh_CN`, or `zh_TW` when the content is in one of those three languages.
+- For any other language, use the language's own endonym as a display label (e.g. `日本語` for
+  Japanese, `Deutsch` for German, `한국어` for Korean).
+- Omit `--original-language` entirely when the content language cannot be determined.
+
+This is a display label only — it is not used for routing or search ranking.
+
 - Framework/runtime from manifests, dependencies, and config files. Examples:
   Next.js, Astro, Vite, React, static HTML, FastAPI, Flask, Django, Spring Boot,
   Electron, Tauri, Flutter, React Native, browser extension, Python package,
@@ -168,6 +180,8 @@ Optional flags:
 - `--no-device-auth`
 - `--primary-url`
 - `--dry-run`
+- `--original-language` — source language of the project's content: `en`/`zh_CN`/`zh_TW`, else its endonym (e.g. `日本語`); omit when undetectable
+- `--created-with` — tool/agent the project was built with (repeatable, e.g. `--created-with Claude`)
 
 The script does not write into the project directory. It keeps per-project state
 (the tool id and the prior manifest) in `~/.macdo/projects.json`, keyed by the
