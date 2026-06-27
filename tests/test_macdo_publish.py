@@ -100,5 +100,48 @@ class LegacyManifestTest(unittest.TestCase):
             self.assertIsNone(mp.read_legacy_manifest(Path(tmp)))
 
 
+class CategoryVocabTest(unittest.TestCase):
+    def test_vocab_has_39_keys_incl_other(self):
+        self.assertEqual(len(mp.CATEGORY_VOCAB), 39)
+        self.assertIn("other", mp.CATEGORY_VOCAB)
+        self.assertIn("developer-tools", mp.CATEGORY_VOCAB)
+
+    def test_normalize_lowercases_and_hyphenates_whitespace(self):
+        self.assertEqual(mp.normalize_category("  Developer Tools "), "developer-tools")
+        self.assertEqual(mp.normalize_category("AI Coding"), "ai-coding")
+
+    def test_category_flag_is_repeatable(self):
+        args = mp.parse_args(["--category", "developer-tools", "--category", "productivity",
+                              "--primary-url", "https://example.com"])
+        self.assertEqual(args.category, ["developer-tools", "productivity"])
+
+    def test_default_category_is_other(self):
+        manifest = mp.merge_manifest({}, _args(name="X", summary="s", description="d",
+                                               primary_url="https://example.com"), {"type": "web"})
+        self.assertEqual(manifest["categories"], ["other"])
+
+    def test_valid_categories_pass_validation(self):
+        manifest = _valid_manifest(categories=["Developer Tools", "productivity"])
+        mp.validate_manifest(manifest)  # must not raise
+        # validation normalizes in place to vocab keys
+        self.assertEqual(manifest["categories"], ["developer-tools", "productivity"])
+
+    def test_unknown_category_fails_fast(self):
+        manifest = _valid_manifest(categories=["nonsense-xyz"])
+        with self.assertRaises(SystemExit):
+            mp.validate_manifest(manifest)
+
+
+def _valid_manifest(**overrides):
+    """A minimal valid v2 manifest dict for validate_manifest tests."""
+    m = {
+        "schema": mp.SCHEMA, "name": "Tiny Tool", "summary": "A tiny tool.",
+        "description": "A tiny tool for testing.", "type": "web",
+        "categories": ["other"], "primary_url": "https://example.com",
+    }
+    m.update(overrides)
+    return m
+
+
 if __name__ == "__main__":
     unittest.main()

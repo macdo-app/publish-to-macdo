@@ -72,6 +72,19 @@ Collect automatically from the project directory when possible:
 - Project type, including `web`, `mobile`, `desktop`, `browser_extension`,
   `cli`, `api`, `library`, `plugin`, `workflow`, `bot`, `agent`, `dataset`,
   `document`, or `other`.
+
+### Categories (controlled vocabulary)
+
+Pick 1–3 categories from this fixed list (the **domain** of the tool — not its form, which is `type`).
+Pass each with `--category <key>`. Unknown keys are rejected. Use `other` only when nothing fits.
+
+- AI: `ai-chat` (AI Chat & Assistants), `ai-writing`, `ai-image`, `ai-video`, `ai-audio`, `ai-coding`, `ai-agents`
+- Dev & Build: `developer-tools`, `design`, `no-code`, `automation`, `data`
+- Productivity & Work: `productivity`, `writing`, `office`, `project-management`, `education`
+- Creative & Media: `image`, `video`, `audio`, `entertainment`
+- Business: `marketing`, `ecommerce`, `finance`, `crm`, `customer-support`, `hr`
+- Lifestyle & Consumer: `social`, `communication`, `health`, `lifestyle`, `travel`, `food`, `games`, `news`
+- Tech & Other: `web3`, `security`, `utilities`, `other`
 - Framework/runtime from manifests, dependencies, and config files. Examples:
   Next.js, Astro, Vite, React, static HTML, FastAPI, Flask, Django, Spring Boot,
   Electron, Tauri, Flutter, React Native, browser extension, Python package,

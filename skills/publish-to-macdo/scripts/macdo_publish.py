@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import time
 import webbrowser
@@ -52,6 +53,23 @@ SUPPORTED_TYPES = {
     "other",
 }
 
+# Mirror of the platform's CategoryVocabulary (39 keys). The SKILL.md table is the agent's picker;
+# this set fails fast locally so a bad pick never wastes a 400 round-trip. Keep in sync with the platform.
+CATEGORY_VOCAB = frozenset({
+    "ai-chat", "ai-writing", "ai-image", "ai-video", "ai-audio", "ai-coding", "ai-agents",
+    "developer-tools", "design", "no-code", "automation", "data",
+    "productivity", "writing", "office", "project-management", "education",
+    "image", "video", "audio", "entertainment",
+    "marketing", "ecommerce", "finance", "crm", "customer-support", "hr",
+    "social", "communication", "health", "lifestyle", "travel", "food", "games", "news",
+    "web3", "security", "utilities", "other",
+})
+
+
+def normalize_category(value):
+    # Mirror the server: lower-case + collapse whitespace runs to a single hyphen (no underscore change).
+    return re.sub(r"\s+", "-", value.strip().lower())
+
 
 def main():
     args = parse_args()
@@ -91,7 +109,7 @@ def main():
     print(json.dumps(response, indent=2, ensure_ascii=False))
 
 
-def parse_args():
+def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Generate and submit a mac.do manifest payload")
     parser.add_argument("--project", default=".", help="Local project directory")
     parser.add_argument("--api-base", default=os.environ.get("MACDO_API_BASE", "https://app-api.mac.do"))
@@ -116,7 +134,9 @@ def parse_args():
     parser.add_argument("--idempotency-key", default=os.environ.get("MACDO_IDEMPOTENCY_KEY"),
                         help="Reuse this key to safely retry the same submission")
     parser.add_argument("--dry-run", action="store_true")
-    return parser.parse_args()
+    parser.add_argument("--category", action="append", default=None,
+                        help="A controlled category key (repeatable); pick from the SKILL.md vocabulary")
+    return parser.parse_args(args)
 
 
 def require_publishing_credential(args, api_base):
@@ -724,7 +744,7 @@ def merge_manifest(existing, args, detected):
     if primary_url:
         manifest["primary_url"] = primary_url
     manifest["source_url"] = first_present(args.source_url, manifest.get("source_url"))
-    manifest.setdefault("categories", ["productivity"])
+    manifest["categories"] = args.category or manifest.get("categories") or ["other"]
     manifest.setdefault("tags", ["vibe-coding"])
     manifest.setdefault("permissions", [])
     manifest.setdefault("created_with", ["Codex"])
@@ -778,6 +798,14 @@ def validate_manifest(manifest):
     if manifest.get("type") not in SUPPORTED_TYPES:
         fail("type must be one of: " + ", ".join(sorted(SUPPORTED_TYPES)))
     validate_list_limit(manifest.get("categories"), "categories", 6)
+    categories = manifest.get("categories")
+    if categories:
+        normalized = [normalize_category(c) for c in categories]
+        for original, key in zip(categories, normalized):
+            if key not in CATEGORY_VOCAB:
+                fail(f"category '{original}' is not a valid mac.do category. "
+                     f"Pick from the vocabulary in SKILL.md (e.g. developer-tools, productivity, other).")
+        manifest["categories"] = normalized  # store normalized vocab keys
     validate_list_limit(manifest.get("tags"), "tags", 12)
     validate_list_limit(manifest.get("permissions"), "permissions", 12)
     validate_list_limit(manifest.get("created_with"), "created_with", 8)
