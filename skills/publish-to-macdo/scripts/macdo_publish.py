@@ -82,6 +82,8 @@ def load_translations_file(path):
         fail(f"could not read --translations-file {path}: {exc}")
     if not isinstance(data, dict):
         fail("--translations-file must be a JSON object mapping locale -> {summary, description}")
+    if not data:
+        fail("--translations-file has no locales (expected en/zh_CN/zh_TW)")
     for locale, prose in data.items():
         if locale not in SUPPORTED_LOCALES:
             fail(f"--translations-file has unsupported locale '{locale}' (use en, zh_CN, zh_TW)")
@@ -843,6 +845,10 @@ def validate_manifest(manifest):
         missing.append("primary_url")
     if missing:
         fail("Missing required manifest fields: " + ", ".join(missing))
+    if len(manifest["summary"]) > 280:
+        fail("summary must be 280 characters or fewer")
+    if len(manifest["description"]) > 4000:
+        fail("description must be 4000 characters or fewer")
     validate_allowed_fields(manifest, "manifest", TOP_LEVEL_FIELDS)
     validate_allowed_fields(manifest.get("creator"), "creator", CREATOR_FIELDS)
     validate_allowed_fields(manifest.get("runtime"), "runtime", RUNTIME_FIELDS)

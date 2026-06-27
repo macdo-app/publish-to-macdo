@@ -190,6 +190,24 @@ class TranslationsTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             mp.validate_manifest(manifest)
 
+    def test_apply_degrades_to_first_present_when_no_zh_cn_or_en(self):
+        manifest = {}
+        mp.apply_translations(manifest, {"zh_TW": {"summary": "TW", "description": "TW d"}})
+        self.assertEqual(manifest["summary"], "TW")
+        self.assertEqual(manifest["translations"], [])
+
+    def test_empty_translations_file_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "t.json"
+            p.write_text("{}", encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                mp.load_translations_file(str(p))
+
+    def test_over_long_summary_fails(self):
+        manifest = _valid_manifest(summary="x" * 281)
+        with self.assertRaises(SystemExit):
+            mp.validate_manifest(manifest)
+
 
 class OriginalLanguageAndCreatedWithTest(unittest.TestCase):
     def test_original_language_carried_into_manifest(self):
@@ -218,6 +236,12 @@ class OriginalLanguageAndCreatedWithTest(unittest.TestCase):
                                                primary_url="https://example.com",
                                                created_with=["Claude"]), {"type": "web"})
         self.assertEqual(manifest["created_with"], ["Claude"])
+
+    def test_original_language_preserves_ascii_case(self):
+        manifest = mp.merge_manifest({}, _args(name="X", summary="s", description="d",
+                                               primary_url="https://example.com",
+                                               original_language="zh_CN"), {"type": "web"})
+        self.assertEqual(manifest["original_language"], "zh_CN")
 
 
 if __name__ == "__main__":
