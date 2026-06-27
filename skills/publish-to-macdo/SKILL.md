@@ -90,6 +90,18 @@ Collect automatically from the project directory when possible:
 - Project type, including `web`, `mobile`, `desktop`, `browser_extension`,
   `cli`, `api`, `library`, `plugin`, `workflow`, `bot`, `agent`, `dataset`,
   `document`, or `other`.
+- Framework/runtime from manifests, dependencies, and config files. Examples:
+  Next.js, Astro, Vite, React, static HTML, FastAPI, Flask, Django, Spring Boot,
+  Electron, Tauri, Flutter, React Native, browser extension, Python package,
+  Java package, Rust crate, Go module, Node CLI, or AI agent frameworks.
+- Package manager or build ecosystem from lockfiles and manifests: pnpm, yarn,
+  bun, npm, pip, Poetry, Maven, Gradle, Cargo, Go, Flutter, Xcode, or Android
+  Gradle.
+- Build command when the project exposes one.
+- Output directory when it is meaningful for that project type.
+- The prior generated manifest from `~/.macdo/projects.json` (carried forward
+  across re-publishes) only as optional input; never require the user to prepare it.
+  A legacy project-local `macdo.json` is read once for migration, then left untouched.
 
 ### Categories (controlled vocabulary)
 
@@ -103,6 +115,7 @@ Pass each with `--category <key>`. Unknown keys are rejected. Use `other` only w
 - Business: `marketing`, `ecommerce`, `finance`, `crm`, `customer-support`, `hr`
 - Lifestyle & Consumer: `social`, `communication`, `health`, `lifestyle`, `travel`, `food`, `games`, `news`
 - Tech & Other: `web3`, `security`, `utilities`, `other`
+
 ### Source language (`--original-language`)
 
 Identify the language of the project's own content (README, UI strings, documentation) and pass
@@ -114,19 +127,6 @@ Identify the language of the project's own content (README, UI strings, document
 - Omit `--original-language` entirely when the content language cannot be determined.
 
 This is a display label only — it is not used for routing or search ranking.
-
-- Framework/runtime from manifests, dependencies, and config files. Examples:
-  Next.js, Astro, Vite, React, static HTML, FastAPI, Flask, Django, Spring Boot,
-  Electron, Tauri, Flutter, React Native, browser extension, Python package,
-  Java package, Rust crate, Go module, Node CLI, or AI agent frameworks.
-- Package manager or build ecosystem from lockfiles and manifests: pnpm, yarn,
-  bun, npm, pip, Poetry, Maven, Gradle, Cargo, Go, Flutter, Xcode, or Android
-  Gradle.
-- Build command when the project exposes one.
-- Output directory when it is meaningful for that project type.
-- The prior generated manifest from `~/.macdo/projects.json` (carried forward
-  across re-publishes) only as optional input; never require the user to prepare it.
-  A legacy project-local `macdo.json` is read once for migration, then left untouched.
 
 Ask the user only for missing information that cannot be inferred:
 
@@ -168,6 +168,7 @@ Optional flags:
 - `--translations-file` — JSON file `{ "en": {summary, description}, "zh_CN": {…}, "zh_TW": {…} }`; promotes `zh_CN` to primary
 - `--source-url`
 - `--type`
+- `--category` — domain category (repeatable, 1–3 picks from the controlled vocabulary; e.g. `--category developer-tools`)
 - `--framework`
 - `--package-manager`
 - `--build-command`
@@ -213,12 +214,18 @@ provided.
 
 Before submission, the script validates that:
 
+- The manifest schema is v2 (`schema: 2`); any carried-forward v1 manifest is force-upgraded
+  automatically before merging new fields.
 - Only known top-level manifest fields are present.
 - Required fields are present: schema, name, summary, description, type, and
   either `primary_url` or legacy `demo_url`.
 - Type is one of the supported mac.do project types.
+- Each category supplied via `--category` belongs to the controlled 39-key vocabulary; unknown
+  keys are rejected with a clear error pointing to the table in SKILL.md.
 - Category, tag, permission, and created-with arrays stay within limits.
 - Enumerated values such as pricing and China reachability are recognized.
+- Translations supplied via `--translations-file` must provide `en`, `zh_CN`, and `zh_TW` locales
+  with no duplicate locale keys; `original_language` must be 1–40 characters when supplied.
 - `primary_url`, legacy `demo_url`, `source_url`, and `creator.url` are absolute
   public `http(s)` URLs.
 - URLs do not point to localhost, private IPs, bare local hostnames, or include
