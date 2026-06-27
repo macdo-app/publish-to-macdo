@@ -1,7 +1,7 @@
 {
   "name": "publish-to-macdo",
   "description": "Publish a local AI-built project to mac.do — inspect the project, collect metadata, choose a public entrypoint URL, and submit it to the mac.do publishing API. Triggered when you tell your agent to \"publish / showcase / share to mac.do\" (发布 / 展示 / 分享 到 mac.do).",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": { "name": "mac.do", "url": "https://mac.do" },
   "homepage": "https://app.mac.do",
   "repository": "https://github.com/macdo-app/publish-to-macdo",
