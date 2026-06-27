@@ -15,6 +15,8 @@ import xml.etree.ElementTree as ET
 
 
 SCHEMA = "https://mac.do/schemas/tool-manifest-v2.json"
+PRIMARY_LOCALE = "zh_CN"
+SUPPORTED_LOCALES = ("en", "zh_CN", "zh_TW")  # also the variant ordering after the primary is removed
 TOP_LEVEL_FIELDS = {
     "schema",
     "name",
@@ -32,6 +34,8 @@ TOP_LEVEL_FIELDS = {
     "permissions",
     "created_with",
     "license",
+    "translations",
+    "original_language",
 }
 CREATOR_FIELDS = {"name", "url"}
 RUNTIME_FIELDS = {"framework", "package_manager", "build_command", "output_dir"}
@@ -71,6 +75,38 @@ def normalize_category(value):
     return re.sub(r"\s+", "-", value.strip().lower())
 
 
+def load_translations_file(path):
+    try:
+        data = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        fail(f"could not read --translations-file {path}: {exc}")
+    if not isinstance(data, dict):
+        fail("--translations-file must be a JSON object mapping locale -> {summary, description}")
+    for locale, prose in data.items():
+        if locale not in SUPPORTED_LOCALES:
+            fail(f"--translations-file has unsupported locale '{locale}' (use en, zh_CN, zh_TW)")
+        if not isinstance(prose, dict) or not prose.get("summary") or not prose.get("description"):
+            fail(f"--translations-file locale '{locale}' needs non-empty summary and description")
+    return data
+
+
+def apply_translations(manifest, translations_map):
+    """Promote PRIMARY_LOCALE (else degrade) to the top-level primary; the rest become translations[]."""
+    if PRIMARY_LOCALE in translations_map:
+        primary = PRIMARY_LOCALE
+    elif "en" in translations_map:
+        primary = "en"
+    else:
+        primary = next(iter(translations_map))
+    manifest["summary"] = translations_map[primary]["summary"]
+    manifest["description"] = translations_map[primary]["description"]
+    manifest["translations"] = [
+        {"locale": loc, "summary": translations_map[loc]["summary"],
+         "description": translations_map[loc]["description"]}
+        for loc in SUPPORTED_LOCALES if loc != primary and loc in translations_map
+    ]
+
+
 def main():
     args = parse_args()
     api_base = args.api_base.rstrip("/")
@@ -94,6 +130,8 @@ def main():
         prior_manifest = read_legacy_manifest(project)  # one-time migration from old project/macdo.json
     detected = detect_project(project)
     manifest = merge_manifest(prior_manifest or {}, args, detected)
+    if args.translations_file:
+        apply_translations(manifest, load_translations_file(args.translations_file))
     validate_manifest(manifest)
 
     if args.dry_run:
@@ -136,6 +174,8 @@ def parse_args(args=None):
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--category", action="append", default=None,
                         help="A controlled category key (repeatable); pick from the SKILL.md vocabulary")
+    parser.add_argument("--translations-file", default=None,
+                        help="JSON file mapping locale -> {summary, description} for en/zh_CN/zh_TW")
     return parser.parse_args(args)
 
 
@@ -806,6 +846,21 @@ def validate_manifest(manifest):
                 fail(f"category '{original}' is not a valid mac.do category. "
                      f"Pick from the vocabulary in SKILL.md (e.g. developer-tools, productivity, other).")
         manifest["categories"] = normalized  # store normalized vocab keys
+    translations = manifest.get("translations")
+    if translations is not None:
+        validate_list_limit(translations, "translations", 3)
+        seen = set()
+        for variant in translations:
+            locale = variant.get("locale")
+            if locale not in SUPPORTED_LOCALES:
+                fail(f"translations locale must be one of {', '.join(SUPPORTED_LOCALES)} (got {locale!r})")
+            if locale in seen:
+                fail(f"duplicate translations locale: {locale}")
+            seen.add(locale)
+            if not variant.get("summary") or len(variant["summary"]) > 280:
+                fail(f"translations[{locale}].summary must be 1–280 chars")
+            if not variant.get("description") or len(variant["description"]) > 4000:
+                fail(f"translations[{locale}].description must be 1–4000 chars")
     validate_list_limit(manifest.get("tags"), "tags", 12)
     validate_list_limit(manifest.get("permissions"), "permissions", 12)
     validate_list_limit(manifest.get("created_with"), "created_with", 8)

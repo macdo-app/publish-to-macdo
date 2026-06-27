@@ -47,20 +47,38 @@ Do not print credentials. Do not commit credentials into project files.
 1. Inspect the local project.
 2. Generate the manifest submission payload from project metadata, package
    metadata, supplied URLs, and the minimum missing user answers.
-3. The script keeps per-project state (the tool id for precise updates and the
+3. **Generate multilingual translations from a single source** — do not author
+   each locale independently (inconsistency risk). Instead:
+   a. Draft the English `summary` and `description` from the project's own
+      materials (README, package metadata, detected purpose).
+   b. Translate that English prose into zh_CN (Simplified Chinese) and zh_TW
+      (Traditional Chinese) — in the same pass to keep all three consistent.
+   c. Write all three locales to a temporary JSON file:
+      ```json
+      {
+        "en":    { "summary": "…", "description": "…" },
+        "zh_CN": { "summary": "…", "description": "…" },
+        "zh_TW": { "summary": "…", "description": "…" }
+      }
+      ```
+   d. Pass `--translations-file <path>` to the script. The script promotes
+      `zh_CN` to the stored primary (`summary`/`description`) and sends `en` and
+      `zh_TW` as `translations[]` variants. A publish without translations uses
+      `--summary`/`--description` directly (Chinese-or-English primary only).
+4. The script keeps per-project state (the tool id for precise updates and the
    prior manifest) in `~/.macdo/projects.json`, keyed by the project path — it no
    longer writes anything into the project directory. Re-publishing the same
    project updates the existing tool. Never require the creator to prepare metadata by hand.
-4. If required fields are missing, ask only for the missing values.
-5. Obtain a scoped mac.do publishing credential through browser/device
+5. If required fields are missing, ask only for the missing values.
+6. Obtain a scoped mac.do publishing credential through browser/device
    authorization when no cached token, `MACDO_PUBLISHING_TOKEN`, or
    `MACDO_API_KEY` exists.
-6. Run `scripts/macdo_publish.py` from this skill directory internally; do not
+7. Run `scripts/macdo_publish.py` from this skill directory internally; do not
    present this command as the user's primary interface.
-7. Submit the generated payload with bearer authentication and an
+8. Submit the generated payload with bearer authentication and an
    `Idempotency-Key`.
-8. Report the submission id, status URL, review URL, and eventual public URL.
-9. If the user asks for progress later, run the script with `--status-id`.
+9. Report the submission id, status URL, review URL, and eventual public URL.
+10. If the user asks for progress later, run the script with `--status-id`.
 
 ## Collected Information
 
@@ -135,6 +153,7 @@ Optional flags:
 - `--name`
 - `--summary`
 - `--description`
+- `--translations-file` — JSON file `{ "en": {summary, description}, "zh_CN": {…}, "zh_TW": {…} }`; promotes `zh_CN` to primary
 - `--source-url`
 - `--type`
 - `--framework`

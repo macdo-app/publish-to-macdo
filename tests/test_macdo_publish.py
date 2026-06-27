@@ -143,5 +143,53 @@ def _valid_manifest(**overrides):
     return m
 
 
+class TranslationsTest(unittest.TestCase):
+    def _tmap(self):
+        return {
+            "en": {"summary": "EN sum", "description": "EN desc"},
+            "zh_CN": {"summary": "中文摘要", "description": "中文描述"},
+            "zh_TW": {"summary": "繁體摘要", "description": "繁體描述"},
+        }
+
+    def test_primary_locale_is_zh_cn(self):
+        self.assertEqual(mp.PRIMARY_LOCALE, "zh_CN")
+
+    def test_apply_promotes_zh_cn_primary_and_orders_variants(self):
+        manifest = {"summary": "old", "description": "old"}
+        mp.apply_translations(manifest, self._tmap())
+        self.assertEqual(manifest["summary"], "中文摘要")
+        self.assertEqual(manifest["description"], "中文描述")
+        self.assertEqual([t["locale"] for t in manifest["translations"]], ["en", "zh_TW"])
+
+    def test_apply_degrades_to_en_when_zh_cn_absent(self):
+        manifest = {}
+        tmap = {"en": {"summary": "EN", "description": "EN d"},
+                "zh_TW": {"summary": "TW", "description": "TW d"}}
+        mp.apply_translations(manifest, tmap)
+        self.assertEqual(manifest["summary"], "EN")
+        self.assertEqual([t["locale"] for t in manifest["translations"]], ["zh_TW"])
+
+    def test_load_translations_file_round_trips(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "t.json"
+            p.write_text(json.dumps(self._tmap()), encoding="utf-8")
+            self.assertEqual(mp.load_translations_file(str(p))["zh_CN"]["summary"], "中文摘要")
+
+    def test_translations_in_top_level_fields(self):
+        self.assertIn("translations", mp.TOP_LEVEL_FIELDS)
+
+    def test_unsupported_locale_fails(self):
+        manifest = _valid_manifest(translations=[{"locale": "ja", "summary": "x", "description": "y"}])
+        with self.assertRaises(SystemExit):
+            mp.validate_manifest(manifest)
+
+    def test_duplicate_locale_fails(self):
+        manifest = _valid_manifest(translations=[
+            {"locale": "en", "summary": "a", "description": "b"},
+            {"locale": "en", "summary": "c", "description": "d"}])
+        with self.assertRaises(SystemExit):
+            mp.validate_manifest(manifest)
+
+
 if __name__ == "__main__":
     unittest.main()
